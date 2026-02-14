@@ -1,7 +1,8 @@
 // Copyright Epic Games, Inc. All Rights Reserved.
 
 #include "GAS_abilitiesPlayerController.h"
-#include "GameFramework/Pawn.h"
+#include "GameFramework/Pawn.h"			 
+#include "GameFramework/CharacterMovementComponent.h"
 #include "Blueprint/AIBlueprintHelperLibrary.h"
 #include "NiagaraSystem.h"
 #include "NiagaraFunctionLibrary.h"
@@ -20,6 +21,13 @@ AGAS_abilitiesPlayerController::AGAS_abilitiesPlayerController()
 	DefaultMouseCursor = EMouseCursor::Default;
 	CachedDestination = FVector::ZeroVector;
 	FollowTime = 0.f;
+
+	ACharacter* ControlledCharacter = GetCharacter();
+	if (ControlledCharacter != nullptr)
+	{
+		ControlledCharacter->GetCharacterMovement()->bOrientRotationToMovement = true;
+		ControlledCharacter->GetCharacterMovement()->RotationRate = FRotator(0.f, 500.f, 0.f);
+	}
 }
 
 void AGAS_abilitiesPlayerController::BeginPlay()
@@ -43,16 +51,20 @@ void AGAS_abilitiesPlayerController::SetupInputComponent()
 	if (UEnhancedInputComponent* EnhancedInputComponent = Cast<UEnhancedInputComponent>(InputComponent))
 	{
 		// Setup mouse input events
-		EnhancedInputComponent->BindAction(SetDestinationClickAction, ETriggerEvent::Started, this, &AGAS_abilitiesPlayerController::OnInputStarted);
-		EnhancedInputComponent->BindAction(SetDestinationClickAction, ETriggerEvent::Triggered, this, &AGAS_abilitiesPlayerController::OnSetDestinationTriggered);
-		EnhancedInputComponent->BindAction(SetDestinationClickAction, ETriggerEvent::Completed, this, &AGAS_abilitiesPlayerController::OnSetDestinationReleased);
-		EnhancedInputComponent->BindAction(SetDestinationClickAction, ETriggerEvent::Canceled, this, &AGAS_abilitiesPlayerController::OnSetDestinationReleased);
+		//EnhancedInputComponent->BindAction(SetDestinationClickAction, ETriggerEvent::Started, this, &AGAS_abilitiesPlayerController::OnInputStarted);
+		//EnhancedInputComponent->BindAction(SetDestinationClickAction, ETriggerEvent::Triggered, this, &AGAS_abilitiesPlayerController::OnSetDestinationTriggered);
+		//EnhancedInputComponent->BindAction(SetDestinationClickAction, ETriggerEvent::Completed, this, &AGAS_abilitiesPlayerController::OnSetDestinationReleased);
+		//EnhancedInputComponent->BindAction(SetDestinationClickAction, ETriggerEvent::Canceled, this, &AGAS_abilitiesPlayerController::OnSetDestinationReleased);
 
-		// Setup touch input events
-		EnhancedInputComponent->BindAction(SetDestinationTouchAction, ETriggerEvent::Started, this, &AGAS_abilitiesPlayerController::OnInputStarted);
-		EnhancedInputComponent->BindAction(SetDestinationTouchAction, ETriggerEvent::Triggered, this, &AGAS_abilitiesPlayerController::OnTouchTriggered);
-		EnhancedInputComponent->BindAction(SetDestinationTouchAction, ETriggerEvent::Completed, this, &AGAS_abilitiesPlayerController::OnTouchReleased);
-		EnhancedInputComponent->BindAction(SetDestinationTouchAction, ETriggerEvent::Canceled, this, &AGAS_abilitiesPlayerController::OnTouchReleased);
+		//// Setup touch input events
+		//EnhancedInputComponent->BindAction(SetDestinationTouchAction, ETriggerEvent::Started, this, &AGAS_abilitiesPlayerController::OnInputStarted);
+		//EnhancedInputComponent->BindAction(SetDestinationTouchAction, ETriggerEvent::Triggered, this, &AGAS_abilitiesPlayerController::OnTouchTriggered);
+		//EnhancedInputComponent->BindAction(SetDestinationTouchAction, ETriggerEvent::Completed, this, &AGAS_abilitiesPlayerController::OnTouchReleased);
+		//EnhancedInputComponent->BindAction(SetDestinationTouchAction, ETriggerEvent::Canceled, this, &AGAS_abilitiesPlayerController::OnTouchReleased);
+
+		// Setup wasd movement
+		EnhancedInputComponent->BindAction(MovementAction, ETriggerEvent::Triggered, this, &AGAS_abilitiesPlayerController::MovementInput);
+
 	}
 	else
 	{
@@ -60,66 +72,83 @@ void AGAS_abilitiesPlayerController::SetupInputComponent()
 	}
 }
 
-void AGAS_abilitiesPlayerController::OnInputStarted()
+void AGAS_abilitiesPlayerController::MovementInput(const FInputActionValue& Value)
 {
-	StopMovement();
-}
+	FVector2D MovementVector = Value.Get<FVector2D>();
 
-// Triggered every frame when the input is held down
-void AGAS_abilitiesPlayerController::OnSetDestinationTriggered()
-{
-	// We flag that the input is being pressed
-	FollowTime += GetWorld()->GetDeltaSeconds();
-	
-	// We look for the location in the world where the player has pressed the input
-	FHitResult Hit;
-	bool bHitSuccessful = false;
-	if (bIsTouch)
-	{
-		bHitSuccessful = GetHitResultUnderFinger(ETouchIndex::Touch1, ECollisionChannel::ECC_Visibility, true, Hit);
-	}
-	else
-	{
-		bHitSuccessful = GetHitResultUnderCursor(ECollisionChannel::ECC_Visibility, true, Hit);
-	}
-
-	// If we hit a surface, cache the location
-	if (bHitSuccessful)
-	{
-		CachedDestination = Hit.Location;
-	}
-	
-	// Move towards mouse pointer or touch
 	APawn* ControlledPawn = GetPawn();
 	if (ControlledPawn != nullptr)
 	{
-		FVector WorldDirection = (CachedDestination - ControlledPawn->GetActorLocation()).GetSafeNormal();
-		ControlledPawn->AddMovementInput(WorldDirection, 1.0, false);
+		const FRotator YawRotation(0, GetControlRotation().Yaw, 0);
+
+		const FVector ForwardDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::X);
+		const FVector RightDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::Y);
+
+		ControlledPawn->AddMovementInput(ForwardDirection, MovementVector.Y);
+		ControlledPawn->AddMovementInput(RightDirection, MovementVector.X);
 	}
 }
 
-void AGAS_abilitiesPlayerController::OnSetDestinationReleased()
-{
-	// If it was a short press
-	if (FollowTime <= ShortPressThreshold)
-	{
-		// We move there and spawn some particles
-		UAIBlueprintHelperLibrary::SimpleMoveToLocation(this, CachedDestination);
-		UNiagaraFunctionLibrary::SpawnSystemAtLocation(this, FXCursor, CachedDestination, FRotator::ZeroRotator, FVector(1.f, 1.f, 1.f), true, true, ENCPoolMethod::None, true);
-	}
-
-	FollowTime = 0.f;
-}
-
-// Triggered every frame when the input is held down
-void AGAS_abilitiesPlayerController::OnTouchTriggered()
-{
-	bIsTouch = true;
-	OnSetDestinationTriggered();
-}
-
-void AGAS_abilitiesPlayerController::OnTouchReleased()
-{
-	bIsTouch = false;
-	OnSetDestinationReleased();
-}
+//void AGAS_abilitiesPlayerController::OnInputStarted()
+//{
+//	StopMovement();
+//}
+//
+//// Triggered every frame when the input is held down
+//void AGAS_abilitiesPlayerController::OnSetDestinationTriggered()
+//{
+//	// We flag that the input is being pressed
+//	FollowTime += GetWorld()->GetDeltaSeconds();
+//	
+//	// We look for the location in the world where the player has pressed the input
+//	FHitResult Hit;
+//	bool bHitSuccessful = false;
+//	if (bIsTouch)
+//	{
+//		bHitSuccessful = GetHitResultUnderFinger(ETouchIndex::Touch1, ECollisionChannel::ECC_Visibility, true, Hit);
+//	}
+//	else
+//	{
+//		bHitSuccessful = GetHitResultUnderCursor(ECollisionChannel::ECC_Visibility, true, Hit);
+//	}
+//
+//	// If we hit a surface, cache the location
+//	if (bHitSuccessful)
+//	{
+//		CachedDestination = Hit.Location;
+//	}
+//	
+//	// Move towards mouse pointer or touch
+//	APawn* ControlledPawn = GetPawn();
+//	if (ControlledPawn != nullptr)
+//	{
+//		FVector WorldDirection = (CachedDestination - ControlledPawn->GetActorLocation()).GetSafeNormal();
+//		ControlledPawn->AddMovementInput(WorldDirection, 1.0, false);
+//	}
+//}
+//
+//void AGAS_abilitiesPlayerController::OnSetDestinationReleased()
+//{
+//	// If it was a short press
+//	if (FollowTime <= ShortPressThreshold)
+//	{
+//		// We move there and spawn some particles
+//		UAIBlueprintHelperLibrary::SimpleMoveToLocation(this, CachedDestination);
+//		UNiagaraFunctionLibrary::SpawnSystemAtLocation(this, FXCursor, CachedDestination, FRotator::ZeroRotator, FVector(1.f, 1.f, 1.f), true, true, ENCPoolMethod::None, true);
+//	}
+//
+//	FollowTime = 0.f;
+//}
+//
+//// Triggered every frame when the input is held down
+//void AGAS_abilitiesPlayerController::OnTouchTriggered()
+//{
+//	bIsTouch = true;
+//	OnSetDestinationTriggered();
+//}
+//
+//void AGAS_abilitiesPlayerController::OnTouchReleased()
+//{
+//	bIsTouch = false;
+//	OnSetDestinationReleased();
+//}

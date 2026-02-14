@@ -4,13 +4,15 @@
 
 #include "CoreMinimal.h"
 #include "Templates/SubclassOf.h"
-#include "GameFramework/PlayerController.h"
+#include "GameFramework/PlayerController.h"	
 #include "GAS_abilitiesPlayerController.generated.h"
 
 /** Forward declaration to improve compiling times */
 class UNiagaraSystem;
 class UInputMappingContext;
 class UInputAction;
+
+struct FInputActionValue;
 
 DECLARE_LOG_CATEGORY_EXTERN(LogTemplateCharacter, Log, All);
 
@@ -42,6 +44,9 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category=Input, meta=(AllowPrivateAccess = "true"))
 	UInputAction* SetDestinationTouchAction;
 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	UInputAction* MovementAction;
+
 protected:
 	/** True if the controlled character should navigate to the mouse cursor. */
 	uint32 bMoveToMouseCursor : 1;
@@ -50,6 +55,8 @@ protected:
 	
 	// To add mapping context
 	virtual void BeginPlay();
+
+	void MovementInput(const FInputActionValue& Value);
 
 	/** Input handlers for SetDestination action. */
 	void OnInputStarted();
