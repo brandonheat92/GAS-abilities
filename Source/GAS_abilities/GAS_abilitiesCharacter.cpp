@@ -7,7 +7,10 @@
 #include "Components/CapsuleComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/PlayerController.h"
-#include "GameFramework/SpringArmComponent.h"
+#include "GameFramework/SpringArmComponent.h" 
+#include "EnhancedInputComponent.h"		   
+#include "InputActionValue.h"
+#include "EnhancedInputSubsystems.h"
 #include "Materials/Material.h"
 #include "Engine/World.h"
 
@@ -43,9 +46,44 @@ AGAS_abilitiesCharacter::AGAS_abilitiesCharacter()
 	// Activate ticking in order to update the cursor every frame.
 	PrimaryActorTick.bCanEverTick = true;
 	PrimaryActorTick.bStartWithTickEnabled = true;
+
+	GetCharacterMovement()->bOrientRotationToMovement = true;
+	GetCharacterMovement()->RotationRate = FRotator(0.f, 500.f, 0.f);
 }
 
-void AGAS_abilitiesCharacter::Tick(float DeltaSeconds)
+void AGAS_abilitiesCharacter::BeginPlay()
 {
-    Super::Tick(DeltaSeconds);
+	Super::BeginPlay();
+
+	if (APlayerController* PlayerController = Cast<APlayerController>(Controller))
+	{
+		if (UEnhancedInputLocalPlayerSubsystem* Subsystem =	ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(				PlayerController->GetLocalPlayer()))
+		{
+			Subsystem->AddMappingContext(DefaultMappingContext, 0);
+		}
+	}
+
+}
+
+void AGAS_abilitiesCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
+{
+	Super::SetupPlayerInputComponent(InputComponent);
+
+	if (UEnhancedInputComponent* EnhancedInput = Cast<UEnhancedInputComponent>(InputComponent))
+	{
+		EnhancedInput->BindAction(MovementAction, ETriggerEvent::Triggered, this, &AGAS_abilitiesCharacter::MovementInput);
+	}
+}
+
+void AGAS_abilitiesCharacter::MovementInput(const FInputActionValue& Value)
+{
+	FVector2D MovementVector = Value.Get<FVector2D>();
+
+	const FRotator YawRotation(0, GetControlRotation().Yaw, 0);
+	
+	const FVector ForwardDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::X);
+	const FVector RightDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::Y);
+	
+	AddMovementInput(ForwardDirection, MovementVector.Y);
+	AddMovementInput(RightDirection, MovementVector.X);
 }

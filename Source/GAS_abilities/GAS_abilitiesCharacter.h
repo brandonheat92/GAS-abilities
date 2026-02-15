@@ -6,6 +6,10 @@
 #include "GameFramework/Character.h"
 #include "GAS_abilitiesCharacter.generated.h"
 
+class UInputMappingContext;
+class UInputAction;
+struct FInputActionValue;
+
 UCLASS(Blueprintable)
 class AGAS_abilitiesCharacter : public ACharacter
 {
@@ -14,13 +18,24 @@ class AGAS_abilitiesCharacter : public ACharacter
 public:
 	AGAS_abilitiesCharacter();
 
-	// Called every frame.
-	virtual void Tick(float DeltaSeconds) override;
+	virtual void BeginPlay() override;
+	virtual void SetupPlayerInputComponent(UInputComponent* PlayerInputComponent) override;
 
 	/** Returns TopDownCameraComponent subobject **/
 	FORCEINLINE class UCameraComponent* GetTopDownCameraComponent() const { return TopDownCameraComponent; }
 	/** Returns CameraBoom subobject **/
 	FORCEINLINE class USpringArmComponent* GetCameraBoom() const { return CameraBoom; }
+
+	/** MappingContext */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	UInputMappingContext* DefaultMappingContext;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	UInputAction* MovementAction;
+
+protected:
+
+	void MovementInput(const FInputActionValue& Value);
 
 private:
 	/** Top down camera */
