@@ -18,6 +18,7 @@ class GAS_ABILITIES_API AGAS_AbilitiesPlayerState : public APlayerState,
 {
 	GENERATED_BODY()
 
+public:
     AGAS_AbilitiesPlayerState();
 	
     virtual UGAS_AbilitySystemComponent* GetAbilitySystemComponent() const override;

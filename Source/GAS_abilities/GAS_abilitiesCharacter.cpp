@@ -12,6 +12,7 @@
 #include "InputActionValue.h"
 #include "EnhancedInputSubsystems.h"
 #include "Materials/Material.h"
+#include "GAS_AbilitiesPlayerState.h"
 #include "Engine/World.h"
 
 AGAS_abilitiesCharacter::AGAS_abilitiesCharacter()
@@ -73,6 +74,22 @@ void AGAS_abilitiesCharacter::SetupPlayerInputComponent(UInputComponent* PlayerI
 	{
 		EnhancedInput->BindAction(MovementAction, ETriggerEvent::Triggered, this, &AGAS_abilitiesCharacter::MovementInput);
 	}
+}
+
+void AGAS_abilitiesCharacter::PossessedBy(AController* NewController)
+{
+	Super::PossessedBy(NewController);
+
+	AGAS_AbilitiesPlayerState* PS = GetPlayerState<AGAS_AbilitiesPlayerState>();
+	if (PS)
+	{
+		UGAS_AbilitySystemComponent* ASC = PS->GetAbilitySystemComponent();
+		if (ASC)
+		{
+			ASC->InitAbilityActorInfo(PS, this);
+		}
+	}
+
 }
 
 void AGAS_abilitiesCharacter::MovementInput(const FInputActionValue& Value)

@@ -17,23 +17,92 @@ UGA_LeapSlam::UGA_LeapSlam()
 
 void UGA_LeapSlam::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData)
 {
-    //check ability commit status
+    if (!CommitAbility(Handle, ActorInfo, ActivationInfo))
+    {
+        EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
+        return;
+    }
 
-    //null checks
+    AActor* Avatar = ActorInfo->AvatarActor.Get();
+    if (!Avatar)
+    {
+        EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
+        return;
+    }
 
-    //gather location and direction for leap from CalculateLandingLocation()
+    FVector StartLocation = Avatar->GetActorLocation();
+    FVector TargetLocation = CalculateLandingLocation();
 
-    // init leap ability task and set necessary parameters
-    //bound leap task finish callback and activate
+    const UPlayerAttributeSet* AttributeSet = ActorInfo->AbilitySystemComponent->GetSet<UPlayerAttributeSet>();
+
+    float AttackSpeed = 1.f;
+    if (AttributeSet)
+    {
+        AttackSpeed = FMath::Max(AttributeSet->GetAttackSpeed(), 0.1f);
+    }
+
+    float Duration = BaseDuration / 500;
+
+    UAT_LeapToLocation* ArcTask =
+        UAT_LeapToLocation::ArcMoveToLocation(
+            this,
+            FName("LeapArcMove"),
+            StartLocation,
+            TargetLocation,
+            Duration,
+            ArcHeight);
+
+    ArcTask->OnFinished.AddDynamic(this, &UGA_LeapSlam::OnArcFinished);
+    ArcTask->ReadyForActivation();
 }
 
 FVector UGA_LeapSlam::CalculateLandingLocation()
 {
+    AActor* Avatar = GetAvatarActorFromActorInfo();
+    APlayerController* PC = GetActorInfo().PlayerController.Get();
 
-    //Perform landing calculation, from mouse cursor position, 
-    //also to make sure player is not landing into the gap or empty space falling below
+    if (!PC)
+    {
+        return Avatar->GetActorLocation();
+    }
 
-    return FVector::ZeroVector;
+    FHitResult CursorHit;
+    PC->GetHitResultUnderCursor(ECC_Visibility, false, CursorHit);
+
+    FVector Start = Avatar->GetActorLocation();
+    FVector Direction = (CursorHit.Location - Start).GetSafeNormal();
+
+    float Distance = FVector::Distance(Start, CursorHit.Location);
+
+    float ClampedDistance = FMath::Min(Distance, MaxDistance);
+
+    FVector Desired = Start + Direction * ClampedDistance;
+
+    UNavigationSystemV1* NavSys = UNavigationSystemV1::GetCurrent(GetWorld());
+
+    if (!NavSys)
+    {
+        return Start;
+    }
+
+    FNavLocation Projected;
+
+    if (NavSys->ProjectPointToNavigation(Desired, Projected))
+    {
+        return Projected.Location;
+    }
+
+    for (float Step = ClampedDistance; Step > 0.f; Step -= 50.f)
+    {
+        FVector Test = Start + Direction * Step;
+
+        if (NavSys->ProjectPointToNavigation(Test, Projected))
+        {
+            return Projected.Location;
+        }
+    }
+
+    return Start;
 }
 
 void UGA_LeapSlam::OnArcFinished()
@@ -46,12 +115,18 @@ void UGA_LeapSlam::OnArcFinished()
 
     ApplyAoEDamage(Avatar->GetActorLocation());
 
-    EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, false);
+    EndAbility(CurrentSpecHandle,
+        CurrentActorInfo,
+        CurrentActivationInfo,
+        true,
+        false);
 }
 
 void UGA_LeapSlam::ApplyAoEDamage(const FVector& Location)
 {
-    //spherical cast to obtain enemies in the slam location
+    if (!DamageEffectClass)
+        return;
+
     TArray<FOverlapResult> Overlaps;
 
     GetWorld()->OverlapMultiByChannel(
@@ -63,7 +138,21 @@ void UGA_LeapSlam::ApplyAoEDamage(const FVector& Location)
 
     for (const FOverlapResult& Result : Overlaps)
     {
-        //apply stun to enemies
+        AActor* TargetActor = Result.GetActor();
+        if (!TargetActor)
+            continue;
+
+        UAbilitySystemComponent* TargetASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(TargetActor);
+
+        if (!TargetASC)
+            continue;
+
+        FGameplayEffectSpecHandle SpecHandle = MakeOutgoingGameplayEffectSpec(DamageEffectClass, 1.f);
+
+        if (SpecHandle.IsValid())
+        {
+            TargetASC->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data.Get());
+        }
     }
 }
 
@@ -76,4 +165,3 @@ void UGA_LeapSlam::EndAbility(const FGameplayAbilitySpecHandle Handle, const FGa
         bReplicateEndAbility,
         bWasCancelled);
 }
-
