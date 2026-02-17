@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
+#include "Abilities/GAS_AbilitySystemComponent.h"
 #include "GAS_abilitiesCharacter.generated.h"
 
 class UInputMappingContext;
@@ -34,9 +35,20 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	UInputAction* MovementAction;
 
+	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly, Category = "GAS")
+	TSubclassOf<class UGameplayEffect> DefaultAttributeEffect;
+
+	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly, Category = "GAS")
+	TArray<TSubclassOf<class UGameplayAbility>> DefaultAbilities;
+
 protected:
 
 	void MovementInput(const FInputActionValue& Value);
+	void InitializeAttributes();
+	void GiveAbilities();
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "GAS")
+	UGAS_AbilitySystemComponent* AbilitySystem;
 
 private:
 	/** Top down camera */
@@ -46,5 +58,6 @@ private:
 	/** Camera boom positioning the camera above the character */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
 	class USpringArmComponent* CameraBoom;
+
 };
 

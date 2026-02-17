@@ -25,11 +25,10 @@ public:
 
     UPlayerAttributeSet* GetAttributeSet() const;
 
-protected:
-
     UPROPERTY()
     TObjectPtr<UGAS_AbilitySystemComponent> GAS_AbilitySystemComponent;
 
+protected:
     UPROPERTY()
     TObjectPtr<UPlayerAttributeSet> AttributeSet;
 

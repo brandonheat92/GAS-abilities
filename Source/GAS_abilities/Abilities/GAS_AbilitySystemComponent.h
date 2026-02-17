@@ -17,8 +17,6 @@ class GAS_ABILITIES_API UGAS_AbilitySystemComponent : public UAbilitySystemCompo
 public:
 	void StoreActorInfo(TObjectPtr<ACharacter> AblitiyOwner);
 
-	
-
 private:
 	TObjectPtr<ACharacter> AblitiyOwner;
 };

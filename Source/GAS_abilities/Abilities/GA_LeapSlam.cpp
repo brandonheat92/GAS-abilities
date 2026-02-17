@@ -41,7 +41,7 @@ void UGA_LeapSlam::ActivateAbility(const FGameplayAbilitySpecHandle Handle, cons
         AttackSpeed = FMath::Max(AttributeSet->GetAttackSpeed(), 0.1f);
     }
 
-    float Duration = BaseDuration / 500;
+    float Duration = BaseDuration / AttackSpeed;
 
     UAT_LeapToLocation* ArcTask =
         UAT_LeapToLocation::ArcMoveToLocation(

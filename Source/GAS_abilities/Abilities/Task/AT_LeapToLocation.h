@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Abilities/Tasks/AbilityTask.h"
+#include "Components/SplineComponent.h"
 #include "AT_LeapToLocation.generated.h"
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FArcMoveFinished);
@@ -35,4 +36,8 @@ protected:
 
     TWeakObjectPtr<AActor> AvatarActor;
 
+    UPROPERTY()
+    USplineComponent* MovementSpline;
+
+    float TotalDistance;
 };

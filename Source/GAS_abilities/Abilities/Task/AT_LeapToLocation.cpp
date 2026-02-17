@@ -22,19 +22,42 @@ void UAT_LeapToLocation::Activate()
 {
     Super::Activate();
 
-    if (!Ability)
+    AActor* Avatar = GetAvatarActor();
+    if (!Avatar)
     {
         EndTask();
         return;
     }
-
     AvatarActor = Ability->GetAvatarActorFromActorInfo();
 
-    if (!AvatarActor.IsValid())
-    {
-        EndTask();
-        return;
-    }
+    // Create spline
+    MovementSpline = NewObject<USplineComponent>(Avatar);
+    MovementSpline->RegisterComponent();
+    MovementSpline->SetMobility(EComponentMobility::Movable);
+
+    // Clear any old points
+    MovementSpline->ClearSplinePoints();
+
+    // Start
+    MovementSpline->AddSplinePoint(Start, ESplineCoordinateSpace::World);
+
+    // Mid point (arc)
+    FVector MidPoint = (Start + End) * 0.5f;
+    MidPoint.Z += Height;
+
+    MovementSpline->AddSplinePoint(MidPoint, ESplineCoordinateSpace::World);
+
+    // End
+    MovementSpline->AddSplinePoint(End, ESplineCoordinateSpace::World);
+
+    MovementSpline->SetSplinePointType(0, ESplinePointType::Curve);
+    MovementSpline->SetSplinePointType(1, ESplinePointType::Curve);
+    MovementSpline->SetSplinePointType(2, ESplinePointType::Curve);
+
+    MovementSpline->UpdateSpline();
+
+    TotalDistance = MovementSpline->GetSplineLength();
+    ElapsedTime = 0.f;
 
     bTickingTask = true;
 }
@@ -43,7 +66,7 @@ void UAT_LeapToLocation::TickTask(float DeltaTime)
 {
     Super::TickTask(DeltaTime);
 
-    if (!AvatarActor.IsValid())
+    if (!MovementSpline || !AvatarActor.IsValid())
     {
         EndTask();
         return;
@@ -53,10 +76,14 @@ void UAT_LeapToLocation::TickTask(float DeltaTime)
 
     float Alpha = FMath::Clamp(ElapsedTime / TotalDuration, 0.f, 1.f);
 
-    FVector NewLocation = FMath::Lerp(Start, End, Alpha);
+    float Distance = Alpha * TotalDistance;
+    UE_LOG(LogTemp, Warning, TEXT("Elapsed: %f / %f"), ElapsedTime, TotalDuration);
 
-    float ZOffset = 4.f * Height * Alpha * (1.f - Alpha);
-    NewLocation.Z += ZOffset;
+    FVector NewLocation =
+        MovementSpline->GetLocationAtDistanceAlongSpline(
+            Distance,
+            ESplineCoordinateSpace::World
+        );
 
     AvatarActor->SetActorLocation(NewLocation, false);
 

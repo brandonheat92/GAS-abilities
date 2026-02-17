@@ -83,13 +83,42 @@ void AGAS_abilitiesCharacter::PossessedBy(AController* NewController)
 	AGAS_AbilitiesPlayerState* PS = GetPlayerState<AGAS_AbilitiesPlayerState>();
 	if (PS)
 	{
-		UGAS_AbilitySystemComponent* ASC = PS->GetAbilitySystemComponent();
-		if (ASC)
+		AbilitySystem = PS->GetAbilitySystemComponent();
+		if (AbilitySystem)
 		{
-			ASC->InitAbilityActorInfo(PS, this);
+			AbilitySystem->InitAbilityActorInfo(PS, this);
 		}
 	}
+	InitializeAttributes();
+	GiveAbilities();
+}
 
+void AGAS_abilitiesCharacter::GiveAbilities()
+{
+	if (AbilitySystem)
+	{
+		for (TSubclassOf<UGameplayAbility>& Ability : DefaultAbilities)
+		{
+			AbilitySystem->GiveAbility(FGameplayAbilitySpec(Ability, 1, INDEX_NONE, this));
+		}
+	}
+}
+
+void AGAS_abilitiesCharacter::InitializeAttributes()
+{
+	if (AbilitySystem && DefaultAttributeEffect)
+	{
+		FGameplayEffectContextHandle effectContext = AbilitySystem->MakeEffectContext();
+		effectContext.AddSourceObject(this);
+
+		FGameplayEffectSpecHandle specHandle = AbilitySystem->MakeOutgoingSpec(DefaultAttributeEffect, 1, effectContext);
+
+		if (specHandle.IsValid())
+		{
+			FActiveGameplayEffectHandle geHandle = AbilitySystem->ApplyGameplayEffectSpecToSelf(*specHandle.Data.Get());
+		}
+
+	}
 }
 
 void AGAS_abilitiesCharacter::MovementInput(const FInputActionValue& Value)
