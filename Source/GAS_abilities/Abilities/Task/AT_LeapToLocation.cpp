@@ -44,7 +44,8 @@ void UAT_LeapToLocation::Activate()
     // Mid point (arc)
     FVector MidPoint = (Start + End) * 0.5f;
     MidPoint.Z += Height;
-
+    
+    //TODO : do this more smoother with more points with bezier curve equations
     MovementSpline->AddSplinePoint(MidPoint, ESplineCoordinateSpace::World);
 
     // End
@@ -79,16 +80,24 @@ void UAT_LeapToLocation::TickTask(float DeltaTime)
     float Distance = Alpha * TotalDistance;
     UE_LOG(LogTemp, Warning, TEXT("Elapsed: %f / %f"), ElapsedTime, TotalDuration);
 
-    FVector NewLocation =
-        MovementSpline->GetLocationAtDistanceAlongSpline(
-            Distance,
-            ESplineCoordinateSpace::World
-        );
+    FVector NewLocation = MovementSpline->GetLocationAtDistanceAlongSpline(Distance, ESplineCoordinateSpace::World);
 
+    FVector Tangent = MovementSpline->GetDirectionAtDistanceAlongSpline(Distance, ESplineCoordinateSpace::World);
+    FRotator TargetRotation = Tangent.Rotation();
+    TargetRotation.Pitch = 0.f;
+    TargetRotation.Roll = 0.f;
+
+    FRotator CurrentRotation = AvatarActor->GetActorRotation();
+
+    FRotator NewRotation = FMath::RInterpTo(CurrentRotation, TargetRotation, DeltaTime, 10.f);
+
+    //set actor rotation and location along the spline
     AvatarActor->SetActorLocation(NewLocation, false);
+    AvatarActor->SetActorRotation(NewRotation);
 
     if (Alpha >= 1.f)
     {
+
         OnFinished.Broadcast();
         EndTask();
     }

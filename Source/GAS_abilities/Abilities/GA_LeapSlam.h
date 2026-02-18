@@ -4,6 +4,8 @@
 
 #include "CoreMinimal.h"
 #include "Abilities/GameplayAbility.h"
+#include "NiagaraFunctionLibrary.h"
+#include "NiagaraSystem.h"
 #include "GA_LeapSlam.generated.h"
 
 /**
@@ -30,6 +32,15 @@ protected:
 
     UPROPERTY(EditDefaultsOnly, Category = "Leap")
     float AoERadius = 300.f;
+
+    UPROPERTY(EditDefaultsOnly, Category = "Slam")
+    UAnimMontage* SlamMontage;
+
+    UPROPERTY(EditDefaultsOnly, Category = "Slam")
+    TSubclassOf<UCameraShakeBase> LandingCameraShake;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Slam")
+    FGameplayTag LandingVFXCueTag;
 
     virtual void ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData) override;
 

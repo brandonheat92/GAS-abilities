@@ -8,6 +8,9 @@
 #include "AbilitySystemComponent.h"
 #include "AbilitySystemGlobals.h"
 #include "Engine/OverlapResult.h"
+#include "NiagaraFunctionLibrary.h"
+#include "NiagaraSystem.h"
+#include "Abilities/Tasks/AbilityTask_PlayMontageAndWait.h"
 #include "AttributeSets/PlayerAttribute/PlayerAttributeSet.h"
 
 UGA_LeapSlam::UGA_LeapSlam()
@@ -43,14 +46,7 @@ void UGA_LeapSlam::ActivateAbility(const FGameplayAbilitySpecHandle Handle, cons
 
     float Duration = BaseDuration / AttackSpeed;
 
-    UAT_LeapToLocation* ArcTask =
-        UAT_LeapToLocation::ArcMoveToLocation(
-            this,
-            FName("LeapArcMove"),
-            StartLocation,
-            TargetLocation,
-            Duration,
-            ArcHeight);
+    UAT_LeapToLocation* ArcTask = UAT_LeapToLocation::ArcMoveToLocation(this, FName("LeapArcMove"), StartLocation, TargetLocation, Duration, ArcHeight);
 
     ArcTask->OnFinished.AddDynamic(this, &UGA_LeapSlam::OnArcFinished);
     ArcTask->ReadyForActivation();
@@ -113,13 +109,42 @@ void UGA_LeapSlam::OnArcFinished()
         return;
     }
 
+    if (LandingCameraShake)
+    {
+        APlayerController* PC = GetActorInfo().PlayerController.Get();
+        if (PC)
+        {
+            PC->ClientStartCameraShake(LandingCameraShake);
+        }
+    }
+
+    if (SlamMontage)
+    {
+        UAbilityTask_PlayMontageAndWait* MontageTask = UAbilityTask_PlayMontageAndWait::CreatePlayMontageAndWaitProxy(this, NAME_None, SlamMontage, 1.f);
+
+        MontageTask->ReadyForActivation();
+    }
+    
+    //moved to Cue
+    //if (LandingVFX)
+    //{
+    //    FVector SpawnLocation = CurrentActorInfo->AvatarActor.Get()->GetActorLocation();
+    //    FRotator SpawnRotation = FRotator::ZeroRotator;
+
+    //    UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), LandingVFX.Get(), SpawnLocation, SpawnRotation, FVector::OneVector,
+    //        true,   // auto destroy
+    //        true, ENCPoolMethod::AutoRelease, true);
+    //}
+
+    FGameplayCueParameters CueParams;
+    CueParams.Location = Avatar->GetActorLocation();
+    CueParams.Instigator = Avatar;
+
+    GetAbilitySystemComponentFromActorInfo()->ExecuteGameplayCue(LandingVFXCueTag, CueParams);
+
     ApplyAoEDamage(Avatar->GetActorLocation());
 
-    EndAbility(CurrentSpecHandle,
-        CurrentActorInfo,
-        CurrentActivationInfo,
-        true,
-        false);
+    EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, false);
 }
 
 void UGA_LeapSlam::ApplyAoEDamage(const FVector& Location)
@@ -158,10 +183,5 @@ void UGA_LeapSlam::ApplyAoEDamage(const FVector& Location)
 
 void UGA_LeapSlam::EndAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateEndAbility, bool bWasCancelled)
 {
-    Super::EndAbility(
-        Handle,
-        ActorInfo,
-        ActivationInfo,
-        bReplicateEndAbility,
-        bWasCancelled);
+    Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
 }

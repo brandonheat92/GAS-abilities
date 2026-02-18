@@ -31,13 +31,14 @@ protected:
 
     float TotalDuration;
     float Height;
+    float HeightOffset;
 
     float ElapsedTime;
+    float TotalDistance;
 
     TWeakObjectPtr<AActor> AvatarActor;
 
     UPROPERTY()
     USplineComponent* MovementSpline;
 
-    float TotalDistance;
 };
