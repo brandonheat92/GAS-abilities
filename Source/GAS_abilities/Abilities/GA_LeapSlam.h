@@ -49,6 +49,15 @@ protected:
     UPROPERTY(EditDefaultsOnly, Category = "Leap")
     TSubclassOf<UGameplayEffect> DamageEffectClass;
 
+    UPROPERTY(EditDefaultsOnly, Category = "Slam")
+    float Radius = 400.f;
+
+    UPROPERTY(EditDefaultsOnly, Category = "Slam")
+    float KnockbackStrength = 1200.f;
+
+    UPROPERTY(EditDefaultsOnly, Category = "Slam")
+    float UpwardForce = 600.f;
+
 private:
 
     FVector CalculateLandingLocation();

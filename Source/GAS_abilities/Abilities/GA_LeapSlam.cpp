@@ -10,6 +10,7 @@
 #include "Engine/OverlapResult.h"
 #include "NiagaraFunctionLibrary.h"
 #include "NiagaraSystem.h"
+#include "GAS_abilities/Enemy/EnemyCharacter.h"
 #include "Abilities/Tasks/AbilityTask_PlayMontageAndWait.h"
 #include "AttributeSets/PlayerAttribute/PlayerAttributeSet.h"
 
@@ -150,7 +151,9 @@ void UGA_LeapSlam::OnArcFinished()
 void UGA_LeapSlam::ApplyAoEDamage(const FVector& Location)
 {
     if (!DamageEffectClass)
+    {
         return;
+    }
 
     TArray<FOverlapResult> Overlaps;
 
@@ -164,10 +167,15 @@ void UGA_LeapSlam::ApplyAoEDamage(const FVector& Location)
     for (const FOverlapResult& Result : Overlaps)
     {
         AActor* TargetActor = Result.GetActor();
-        if (!TargetActor)
+        if (!TargetActor || TargetActor == GetAvatarActorFromActorInfo())
+        {
             continue;
+        }
 
-        UAbilitySystemComponent* TargetASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(TargetActor);
+        //Access ability system from the enemies to apply damage effect, but skipping it to keep it simple for the test
+        //=========================================
+
+        /*UAbilitySystemComponent* TargetASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(TargetActor);
 
         if (!TargetASC)
             continue;
@@ -177,7 +185,21 @@ void UGA_LeapSlam::ApplyAoEDamage(const FVector& Location)
         if (SpecHandle.IsValid())
         {
             TargetASC->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data.Get());
+        }*/
+
+        ACharacter* Enemy = Cast<AEnemyCharacter>(TargetActor);
+        if (!Enemy)
+        {
+            continue;
         }
+
+        FVector Direction = (Enemy->GetActorLocation() - Location).GetSafeNormal();
+
+        FVector LaunchVelocity = Direction * KnockbackStrength;
+
+        LaunchVelocity.Z = UpwardForce;
+
+        Enemy->LaunchCharacter(LaunchVelocity, true, true);
     }
 }
 
