@@ -58,6 +58,9 @@ protected:
     UPROPERTY(EditDefaultsOnly, Category = "Slam")
     float UpwardForce = 600.f;
 
+    UPROPERTY(EditDefaultsOnly, Category = "Slam")
+    bool DebugSlamLanding = false;
+
 private:
 
     FVector CalculateLandingLocation();

@@ -18,7 +18,7 @@ public:
     UPROPERTY(BlueprintAssignable)
     FArcMoveFinished OnFinished;        //callback to broadcast leap task finish
 
-    static UAT_LeapToLocation* ArcMoveToLocation(UGameplayAbility* OwningAbility, FName TaskInstanceName, FVector StartLocation, FVector TargetLocation, float Duration, float ArcHeight);
+    static UAT_LeapToLocation* ArcMoveToLocation(UGameplayAbility* OwningAbility, FName TaskInstanceName, FVector StartLocation, FVector TargetLocation, float Duration, float ArcHeight, bool IsDebug);
 
     virtual void Activate() override;
     virtual void TickTask(float DeltaTime) override;
@@ -40,5 +40,9 @@ protected:
 
     UPROPERTY()
     USplineComponent* MovementSpline;
+
+private:
+
+    bool DebugLeap;
 
 };

@@ -5,7 +5,7 @@
 #include "GameFramework/Actor.h"
 #include "Abilities/GameplayAbility.h"
 
-UAT_LeapToLocation* UAT_LeapToLocation::ArcMoveToLocation(UGameplayAbility* OwningAbility, FName TaskInstanceName, FVector StartLocation, FVector TargetLocation, float Duration, float ArcHeight)
+UAT_LeapToLocation* UAT_LeapToLocation::ArcMoveToLocation(UGameplayAbility* OwningAbility, FName TaskInstanceName, FVector StartLocation, FVector TargetLocation, float Duration, float ArcHeight, bool IsDebug)
 {
     UAT_LeapToLocation* MyObj = NewAbilityTask<UAT_LeapToLocation>(OwningAbility, TaskInstanceName);
 
@@ -14,6 +14,7 @@ UAT_LeapToLocation* UAT_LeapToLocation::ArcMoveToLocation(UGameplayAbility* Owni
     MyObj->TotalDuration = FMath::Max(Duration, 0.01f);
     MyObj->Height = ArcHeight;
     MyObj->ElapsedTime = 0.f;
+    MyObj->DebugLeap = IsDebug;
 
     return MyObj;
 }
@@ -94,6 +95,11 @@ void UAT_LeapToLocation::TickTask(float DeltaTime)
     //set actor rotation and location along the spline
     AvatarActor->SetActorLocation(NewLocation, false);
     AvatarActor->SetActorRotation(NewRotation);
+
+    if (DebugLeap)
+    {
+        DrawDebugSphere(GetWorld(), NewLocation, 2.f, 6, FColor::Blue, false, 2.f);
+    }
 
     if (Alpha >= 1.f)
     {
