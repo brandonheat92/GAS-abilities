@@ -17,6 +17,8 @@ Rest of the things like UI to show health and mana attribute, attribute reset in
 
 Have used gameplay effect to apply mana cost and cooldown to the player once leap is performed. Its in the leap ability blueprint itself, also used gameplay tags for this.
 
+The leap parameters like leap height, distance, etc are exposed in the ability blueprint allowing modification.
+
 The initial values of the attribute health, mana and attack speed are set in default game effect and gets applied in the player character in PossessedBy(), leap ability is also granted here. The attack speed values can be changed here, the ability also gets this value during the leap calculation.
 
 
